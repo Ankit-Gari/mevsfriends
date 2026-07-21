@@ -4,10 +4,12 @@
     "strict": true,
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
+      ],
+      "@/assets/*": [
+        "./assets/*"
       ]
-    },
-    "allowJs": true
+    }
   },
   "include": [
     "**/*.ts",
