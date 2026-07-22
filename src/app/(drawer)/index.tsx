@@ -32,16 +32,17 @@ export default function HomeScreen() {
   const [streak, setStreak] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const ready = Boolean(session && profile?.username);
+  const userId = session?.user.id;
 
   useEffect(() => {
-    if (!ready || !session) return;
+    if (!ready || !userId) return;
     getHomeGames()
       .then(setGames)
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
-    getCurrentStreak(session.user.id, getISTDateStr())
+    getCurrentStreak(userId, getISTDateStr())
       .then(setStreak)
       .catch(() => {});
-  }, [ready, session]);
+  }, [ready, userId]);
 
   if (loading) {
     return <LoadingScreen />;

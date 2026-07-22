@@ -55,7 +55,12 @@ export function GameOverModal({
           <Badge label={`Mode: ${mode === 'ranked' ? 'Ranked' : 'Classic'}`} variant={mode} />
 
           {mode === 'ranked' && (
-            <Text style={styles.statusText}>
+            // Every branch renders explicit text, including 'idle' — a
+            // blank status area here is exactly what let the mobile
+            // submission-skip bug look like a clean success. Never let this
+            // render nothing.
+            <Text style={[styles.statusText, submitStatus === 'error' && styles.errorText]}>
+              {submitStatus === 'idle' && 'Not saved yet.'}
               {submitStatus === 'submitting' && 'Saving score…'}
               {submitStatus === 'submitted' && 'Score saved to the leaderboard.'}
               {submitStatus === 'error' && `Couldn't save score: ${submitError}`}

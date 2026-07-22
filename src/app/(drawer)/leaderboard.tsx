@@ -22,6 +22,7 @@ const RANK_COLORS: Record<number, string> = {
 
 export default function LeaderboardScreen() {
   const { session } = useSession();
+  const userId = session?.user.id;
   const [games, setGames] = useState<LiveGame[]>([]);
   const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -29,22 +30,22 @@ export default function LeaderboardScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!session) return;
+    if (!userId) return;
     getLiveGames()
       .then((liveGames) => {
         setGames(liveGames);
         setSelectedGameId((current) => current ?? liveGames[0]?.id ?? null);
       })
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
-  }, [session]);
+  }, [userId]);
 
   useEffect(() => {
-    if (!session || !selectedGameId) return;
+    if (!userId || !selectedGameId) return;
     setRows(null);
     getMonthlyLeaderboard(selectedGameId, getISTMonthKey())
       .then(setRows)
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
-  }, [session, selectedGameId]);
+  }, [userId, selectedGameId]);
 
   const selectedGame = games.find((g) => g.id === selectedGameId);
 

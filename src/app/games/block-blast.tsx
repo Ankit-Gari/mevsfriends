@@ -5,10 +5,10 @@ import { GameOverModal } from '@/components/game-over-modal';
 import Game, { BlockBlastMode, GameHandle, GameOverInfo } from '@/components/games/block-blast/Game';
 import { getISTMonthKey } from '@/constants/games/block-blast/Rng';
 import { useProfile } from '@/hooks/use-profile';
-import { useSession } from '@/hooks/use-session';
 import { continueForCoins } from '@/lib/coins';
 import { getMyBestScore } from '@/lib/leaderboard';
 import { submitRankedScore } from '@/lib/ranked';
+import { supabase } from '@/lib/supabase';
 
 const GAME_ID = 'block_blast';
 
@@ -18,7 +18,6 @@ function isValidMode(value: string | string[] | undefined): value is BlockBlastM
 
 export default function BlockBlastScreen() {
 	const { mode: modeParam } = useLocalSearchParams<{ mode?: string }>();
-	const { session } = useSession();
 	const { profile, refetch: refetchProfile } = useProfile();
 	const gameRef = useRef<GameHandle>(null);
 
@@ -41,23 +40,43 @@ export default function BlockBlastScreen() {
 	const handleGameOver = useCallback((info: GameOverInfo) => {
 		setGameOverInfo(info);
 
-		if (mode === 'ranked' && session) {
+		if (mode !== 'ranked') return;
+
+		// Regression fix: this used to gate on the `session` value from the
+		// useSession() React-state hook. If that value was stale or briefly
+		// null at the exact moment game-over fired — a real risk on native,
+		// where Reanimated's runOnJS bridges across a genuine separate UI
+		// thread (unlike web, where "worklets" just run synchronously in the
+		// same JS context) — this whole block was silently skipped: no
+		// setSubmitStatus('submitting') ever ran, so the modal showed no
+		// status text at all, which read as a clean success even though
+		// nothing was ever sent. Fetching the session fresh here removes the
+		// dependency on that hook's timing entirely, and every outcome
+		// (including "not signed in") now sets an explicit status.
+		setSubmitStatus('submitting');
+		setSubmitError(null);
+
+		(async () => {
+			const { data: { session: freshSession } } = await supabase.auth.getSession();
+			if (!freshSession) {
+				throw new Error('Not signed in — score was not saved.');
+			}
+
 			// Capture the pre-this-run best BEFORE submitting, so "New Best!"
 			// compares against what the player had walking in, not a number
 			// that already includes this very run.
-			getMyBestScore(session.user.id, GAME_ID, getISTMonthKey())
+			getMyBestScore(freshSession.user.id, GAME_ID, getISTMonthKey())
 				.then(setPreviousBest)
 				.catch(() => {});
 
-			setSubmitStatus('submitting');
-			submitRankedScore(GAME_ID, info.finalScore, info.moveCount, info.finalBoardState)
-				.then(() => setSubmitStatus('submitted'))
-				.catch((err) => {
-					setSubmitStatus('error');
-					setSubmitError(err instanceof Error ? err.message : String(err));
-				});
-		}
-	}, [mode, session]);
+			await submitRankedScore(GAME_ID, info.finalScore, info.moveCount, info.finalBoardState);
+		})()
+			.then(() => setSubmitStatus('submitted'))
+			.catch((err) => {
+				setSubmitStatus('error');
+				setSubmitError(err instanceof Error ? err.message : String(err));
+			});
+	}, [mode]);
 
 	const handlePlayAgain = useCallback(() => {
 		setGameOverInfo(null);

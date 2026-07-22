@@ -28,6 +28,16 @@ export async function submitRankedScore(
     },
   });
 
+  // supabase-js's functions.invoke() already rejects (populates `error`) on
+  // any non-2xx response — this isn't a bare fetch() that silently swallows
+  // HTTP failures. But don't just trust "no thrown error" as proof of
+  // success either: explicitly check the body's `ok` field so a 200 with an
+  // unexpected/logical-failure shape is treated as a failure too, not a
+  // false success (this is what actually let the mobile bug through — the
+  // caller assumed resolution == success without checking).
   if (error) throw error;
+  if (!data || data.ok !== true) {
+    throw new Error(data?.error ? `Score not saved: ${data.error}` : "Score not saved: unexpected response from server.");
+  }
   return data;
 }

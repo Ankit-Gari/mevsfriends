@@ -5,15 +5,20 @@ import { getProfile, Profile } from "@/lib/profile";
 
 export function useProfile() {
   const { session } = useSession();
+  const userId = session?.user.id;
   const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
 
+  // Depend on the stable user id, not the `session` object reference — the
+  // session context can still hand back a technically-new object in edge
+  // cases, and keying off the object would refetch the profile every time
+  // even though the signed-in user hasn't changed.
   const refetch = useCallback(() => {
-    if (!session) {
+    if (!userId) {
       setProfile(undefined);
       return;
     }
-    getProfile(session.user.id).then(setProfile);
-  }, [session]);
+    getProfile(userId).then(setProfile);
+  }, [userId]);
 
   useEffect(() => {
     refetch();

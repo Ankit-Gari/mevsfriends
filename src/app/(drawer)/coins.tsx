@@ -38,16 +38,17 @@ function EarnTaskRow({ icon, title, subtitle, progress }: { icon: string; title:
 
 export default function CoinsScreen() {
   const { session } = useSession();
+  const userId = session?.user.id;
   const { profile } = useProfile();
   const [activity, setActivity] = useState<CoinTransaction[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!session) return;
-    getRecentCoinActivity(session.user.id)
+    if (!userId) return;
+    getRecentCoinActivity(userId)
       .then(setActivity)
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
-  }, [session]);
+  }, [userId]);
 
   return (
     <ScreenBackground>

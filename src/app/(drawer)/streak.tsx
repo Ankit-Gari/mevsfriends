@@ -30,6 +30,7 @@ const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export default function StreakScreen() {
   const { session } = useSession();
+  const userId = session?.user.id;
   const [streak, setStreak] = useState<number | null>(null);
   const [longestStreak, setLongestStreak] = useState<number | null>(null);
   const [days, setDays] = useState<DayMark[] | null>(null);
@@ -37,14 +38,14 @@ export default function StreakScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!session) return;
+    if (!userId) return;
     const todayIST = getISTDateStr();
 
-    getCurrentStreak(session.user.id, todayIST).then(setStreak).catch((err) => setError(String(err)));
-    getLongestStreak(session.user.id, getISTMonthKey()).then(setLongestStreak).catch(() => {});
-    getLast7Days(session.user.id).then(setDays).catch((err) => setError(String(err)));
+    getCurrentStreak(userId, todayIST).then(setStreak).catch((err) => setError(String(err)));
+    getLongestStreak(userId, getISTMonthKey()).then(setLongestStreak).catch(() => {});
+    getLast7Days(userId).then(setDays).catch((err) => setError(String(err)));
     getStreakLeaderboard(todayIST).then(setLeaderboard).catch((err) => setError(String(err)));
-  }, [session]);
+  }, [userId]);
 
   return (
     <ScreenBackground>
